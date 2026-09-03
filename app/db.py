@@ -194,3 +194,43 @@ def get_group(group_id: int):
     with connection() as conn:
         row = _execute(conn, "SELECT id, name FROM groups WHERE id=?", (group_id,)).fetchone()
         return dict(row) if row else None
+
+
+def import_lessons(rows, replace=False):
+    """Import normalized lesson rows. Creates missing groups automatically."""
+    with connection() as conn:
+        group_ids = {}
+        for row in rows:
+            name = row["group"].strip()
+            if name not in group_ids:
+                existing = _execute(conn, "SELECT id FROM groups WHERE name=?", (name,)).fetchone()
+                if existing:
+                    group_ids[name] = existing["id"]
+                else:
+                    if _is_postgres():
+                        cur = _execute(conn, "INSERT INTO groups(name) VALUES (?) RETURNING id", (name,))
+                        group_ids[name] = cur.fetchone()["id"]
+                    else:
+                        cur = _execute(conn, "INSERT INTO groups(name) VALUES (?)", (name,))
+                        group_ids[name] = cur.lastrowid
+
+        if replace:
+            for group_id in set(group_ids.values()):
+                _execute(conn, "DELETE FROM lessons WHERE group_id=?", (group_id,))
+
+        sql = """
+            INSERT INTO lessons
+            (group_id, weekday, start_time, end_time, subject, teacher, room, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        for row in rows:
+            _execute(conn, sql, (
+                group_ids[row["group"]], row["weekday"], row["start_time"], row["end_time"],
+                row["subject"], row.get("teacher", ""), row.get("room", ""), row.get("notes", "")
+            ))
+
+        return {
+            "groups": len(group_ids),
+            "lessons": len(rows),
+            "mode": "replace" if replace else "append",
+        }

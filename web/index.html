@@ -17,55 +17,100 @@
       <button id="adminButton" class="icon-btn hidden" title="Админка">⚙️</button>
     </header>
 
-    <section class="card">
+    <section class="card group-card">
       <label for="groupSelect">Группа</label>
       <select id="groupSelect"></select>
     </section>
 
     <section class="days" id="days"></section>
-
     <section id="schedule"></section>
 
     <section id="adminPanel" class="admin hidden">
-      <div class="admin-header">
-        <h2>⚙️ Админка</h2>
+      <div class="admin-title">
+        <div>
+          <div class="eyebrow">ADMIN</div>
+          <h2>Управление</h2>
+        </div>
         <button id="closeAdmin" class="secondary">Закрыть</button>
       </div>
 
-      <div class="card">
-        <h3>Новая группа</h3>
-        <div class="row">
-          <input id="newGroupName" placeholder="Например, ИВТ-21">
-          <button id="addGroup" class="primary">Добавить</button>
+      <div class="admin-tabs">
+        <button class="tab active" data-tab="groupsTab">👥 Группы</button>
+        <button class="tab" data-tab="lessonsTab">📖 Занятия</button>
+        <button class="tab" data-tab="importTab">📥 Excel</button>
+      </div>
+
+      <div id="groupsTab" class="tab-panel">
+        <div class="card">
+          <h3>Новая группа</h3>
+          <div class="row">
+            <input id="newGroupName" placeholder="Например, ИС-21" maxlength="100">
+            <button id="addGroup" class="primary">Добавить</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Группы</h3>
+          <div id="groupList"></div>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Управление расписанием</h3>
-        <div class="form-grid">
-          <select id="adminGroup"></select>
-          <select id="lessonDay">
-            <option value="1">Понедельник</option>
-            <option value="2">Вторник</option>
-            <option value="3">Среда</option>
-            <option value="4">Четверг</option>
-            <option value="5">Пятница</option>
-            <option value="6">Суббота</option>
-            <option value="7">Воскресенье</option>
-          </select>
-          <input id="startTime" type="time" value="09:00">
-          <input id="endTime" type="time" value="10:30">
-          <input id="subject" placeholder="Предмет">
-          <input id="teacher" placeholder="Преподаватель">
-          <input id="room" placeholder="Аудитория">
-          <input id="notes" placeholder="Заметка (необязательно)">
+      <div id="lessonsTab" class="tab-panel hidden">
+        <div class="card">
+          <div class="section-head">
+            <h3>Новое занятие</h3>
+            <span class="hint">Заполни поля и нажми «Сохранить»</span>
+          </div>
+          <input type="hidden" id="editingLessonId">
+          <div class="form-grid">
+            <select id="adminGroup"></select>
+            <select id="lessonDay">
+              <option value="1">Понедельник</option><option value="2">Вторник</option>
+              <option value="3">Среда</option><option value="4">Четверг</option>
+              <option value="5">Пятница</option><option value="6">Суббота</option>
+              <option value="7">Воскресенье</option>
+            </select>
+            <input id="startTime" type="time" value="09:00">
+            <input id="endTime" type="time" value="10:30">
+            <input id="subject" placeholder="Предмет *" maxlength="200">
+            <input id="teacher" placeholder="Преподаватель" maxlength="200">
+            <input id="room" placeholder="Аудитория" maxlength="100">
+            <input id="notes" placeholder="Заметка" maxlength="500">
+          </div>
+          <div class="row">
+            <button id="saveLesson" class="primary full">Сохранить занятие</button>
+            <button id="cancelEdit" class="secondary hidden">Отмена</button>
+          </div>
         </div>
-        <button id="addLesson" class="primary full">Добавить занятие</button>
+
+        <div class="card">
+          <div class="section-head">
+            <h3>Занятия группы</h3>
+            <select id="lessonFilterGroup" class="compact-select"></select>
+          </div>
+          <div id="adminLessons"></div>
+        </div>
       </div>
 
-      <div class="card">
-        <h3>Занятия группы</h3>
-        <div id="adminLessons"></div>
+      <div id="importTab" class="tab-panel hidden">
+        <div class="card import-card">
+          <h3>📥 Загрузить расписание из Excel</h3>
+          <p class="hint">Можно сразу загрузить несколько групп. Недостающие группы создадутся автоматически.</p>
+          <button id="downloadTemplate" class="secondary full">📄 Скачать шаблон Excel</button>
+          <div class="drop-zone" id="dropZone">
+            <input id="excelFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+            <div class="drop-icon">📊</div>
+            <strong id="fileName">Выбери файл .xlsx</strong>
+            <span class="hint">Нажми сюда, чтобы выбрать Excel</span>
+          </div>
+          <label class="radio-row"><input type="radio" name="importMode" value="append" checked> Добавить к существующему расписанию</label>
+          <label class="radio-row"><input type="radio" name="importMode" value="replace"> Заменить расписание импортируемых групп</label>
+          <button id="importExcel" class="primary full" disabled>⬆️ Импортировать</button>
+          <div class="import-help">
+            <b>Обязательные колонки:</b> Группа, День, Начало, Конец, Предмет.<br>
+            <b>Дополнительные:</b> Преподаватель, Аудитория, Заметки.<br>
+            День можно писать как Пн/Вт/Ср/Чт/Пт/Сб/Вс или полностью.
+          </div>
+        </div>
       </div>
     </section>
   </main>
