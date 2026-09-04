@@ -16,5 +16,11 @@ ADMIN_IDS = {
     if x.strip().isdigit()
 }
 
+ADMIN_USERNAMES = {
+    x.strip().lstrip("@").lower()
+    for x in os.getenv("ADMIN_USERNAMES", "").split(",")
+    if x.strip()
+}
+
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN is not set. Add it to environment variables.")

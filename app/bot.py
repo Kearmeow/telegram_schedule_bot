@@ -12,7 +12,7 @@ from aiogram.types import (
     CallbackQuery,
 )
 
-from .config import WEBAPP_URL, ADMIN_IDS
+from .config import WEBAPP_URL, ADMIN_IDS, ADMIN_USERNAMES
 from . import db
 from .api import parse_text_schedule
 
@@ -25,8 +25,10 @@ class AdminScheduleStates(StatesGroup):
     waiting_confirmation = State()
 
 
-def is_admin(user_id: int) -> bool:
-    return user_id in ADMIN_IDS
+def is_admin(user_id: int, username: str | None = None) -> bool:
+    if user_id in ADMIN_IDS:
+        return True
+    return bool(username) and username.lower() in ADMIN_USERNAMES
 
 
 def admin_menu() -> InlineKeyboardMarkup:
@@ -78,10 +80,27 @@ async def start(message: Message):
     )
 
 
+@router.message(Command("id"))
+async def my_id_command(message: Message):
+    username = f"@{message.from_user.username}" if message.from_user.username else "не установлен"
+    await message.answer(
+        "🆔 Твои данные в Telegram:\n\n"
+        f"ID: <code>{message.from_user.id}</code>\n"
+        f"Username: <code>{escape_html(username)}</code>\n\n"
+        "Для админки можно указать ID в ADMIN_IDS или username в ADMIN_USERNAMES.",
+        parse_mode="HTML",
+    )
+
+
 @router.message(Command("admin"))
 async def admin_command(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
-        await message.answer("⛔ У тебя нет доступа к админке.")
+    if not is_admin(message.from_user.id, message.from_user.username):
+        await message.answer(
+            "⛔ У тебя нет доступа к админке.\n\n"
+            f"Твой Telegram ID: <code>{message.from_user.id}</code>\n"
+            "Отправь /id, чтобы увидеть данные полностью.",
+            parse_mode="HTML",
+        )
         return
 
     await state.clear()
@@ -95,7 +114,7 @@ async def admin_command(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "admin:add_schedule")
 async def add_schedule_start(callback: CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
+    if not is_admin(callback.from_user.id, callback.from_user.username):
         await callback.answer("Нет доступа", show_alert=True)
         return
 
@@ -112,7 +131,7 @@ async def add_schedule_start(callback: CallbackQuery, state: FSMContext):
 
 @router.message(AdminScheduleStates.waiting_group)
 async def receive_group(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not is_admin(message.from_user.id, message.from_user.username):
         await state.clear()
         await message.answer("⛔ У тебя нет доступа к админке.")
         return
@@ -142,7 +161,7 @@ async def receive_group(message: Message, state: FSMContext):
 
 @router.message(AdminScheduleStates.waiting_schedule)
 async def receive_schedule(message: Message, state: FSMContext):
-    if not is_admin(message.from_user.id):
+    if not is_admin(message.from_user.id, message.from_user.username):
         await state.clear()
         await message.answer("⛔ У тебя нет доступа к админке.")
         return
@@ -195,7 +214,7 @@ async def receive_schedule(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "admin:confirm")
 async def confirm_import(callback: CallbackQuery, state: FSMContext):
-    if not is_admin(callback.from_user.id):
+    if not is_admin(callback.from_user.id, callback.from_user.username):
         await callback.answer("Нет доступа", show_alert=True)
         return
 
@@ -241,7 +260,7 @@ async def cancel_import(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "admin:groups")
 async def show_groups(callback: CallbackQuery):
-    if not is_admin(callback.from_user.id):
+    if not is_admin(callback.from_user.id, callback.from_user.username):
         await callback.answer("Нет доступа", show_alert=True)
         return
 
