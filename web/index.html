@@ -37,6 +37,7 @@
       <div class="admin-tabs">
         <button class="tab active" data-tab="groupsTab">👥 Группы</button>
         <button class="tab" data-tab="lessonsTab">📖 Занятия</button>
+        <button class="tab" data-tab="textTab">✍️ Быстрый ввод</button>
         <button class="tab" data-tab="importTab">📥 Excel</button>
       </div>
 
@@ -88,6 +89,45 @@
             <select id="lessonFilterGroup" class="compact-select"></select>
           </div>
           <div id="adminLessons"></div>
+        </div>
+      </div>
+
+
+      <div id="textTab" class="tab-panel hidden">
+        <div class="card">
+          <div class="section-head">
+            <h3>✍️ Быстрый ввод расписания</h3>
+            <span class="hint">Напиши расписание обычным текстом</span>
+          </div>
+
+          <input id="textGroup" placeholder="Название группы, например ИС-21" maxlength="100">
+
+          <textarea id="scheduleText" class="schedule-text" rows="16" spellcheck="false"
+            placeholder="Понедельник
+08:30-10:05 Математика | Иванов И.И. | 301
+10:15-11:50 Информатика | Петров П.П. | 205
+
+Вторник
+08:30-10:05 Программирование | Сидоров | 205
+10:15-11:50 Физика | Смирнов | 112"></textarea>
+
+          <div class="text-format">
+            <b>Формат:</b> сначала день недели, затем строки
+            <code>08:30-10:05 Предмет | Преподаватель | Аудитория</code>.
+            Можно также писать
+            <code>1 | 08:30-10:05 | Предмет | Преподаватель | 301</code>.
+          </div>
+
+          <label class="radio-row">
+            <input type="radio" name="textImportMode" value="replace" checked>
+            Заменить расписание этой группы
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="textImportMode" value="append">
+            Добавить к существующему расписанию
+          </label>
+
+          <button id="saveTextSchedule" class="primary full">💾 Сохранить расписание</button>
         </div>
       </div>
 

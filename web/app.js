@@ -267,6 +267,45 @@ $("excelFile").onchange = () => {
   $("importExcel").disabled = !file;
 };
 
+
+$("saveTextSchedule").onclick = async () => {
+  const group = $("textGroup").value.trim();
+  const text = $("scheduleText").value.trim();
+  const mode = document.querySelector('input[name="textImportMode"]:checked').value;
+
+  if (!group) return toast("Введите название группы");
+  if (!text) return toast("Вставьте расписание");
+
+  const button = $("saveTextSchedule");
+  button.disabled = true;
+  button.textContent = "Сохраняем…";
+
+  try {
+    const result = await api(`/api/admin/import/text?telegram_id=${telegramId}`, {
+      method: "POST",
+      body: JSON.stringify({group, text, mode})
+    });
+
+    toast(`Готово: ${result.lessons} занятий, группа «${group}»`);
+    await loadGroups();
+
+    const target = groups.find(g => g.name === group);
+    if (target) {
+      selectedGroup = target.id;
+      $("groupSelect").value = target.id;
+      $("adminGroup").value = target.id;
+      $("lessonFilterGroup").value = target.id;
+      await loadSchedule();
+      await loadAdminLessons();
+    }
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "💾 Сохранить расписание";
+  }
+};
+
 $("downloadTemplate").onclick = async () => {
   try {
     const response = await fetch(`/api/admin/import/template?telegram_id=${telegramId}`);

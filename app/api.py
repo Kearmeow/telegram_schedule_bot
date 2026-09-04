@@ -35,6 +35,11 @@ class LessonCreate(BaseModel):
 class LessonUpdate(LessonCreate):
     pass
 
+class TextScheduleImport(BaseModel):
+    group: str = Field(min_length=1, max_length=100)
+    text: str = Field(min_length=1, max_length=30000)
+    mode: str = Field(default="replace", pattern="^(append|replace)$")
+
 
 def is_admin(telegram_id: int) -> bool:
     return telegram_id in ADMIN_IDS
@@ -203,6 +208,106 @@ async def remove_lesson(lesson_id: int, telegram_id: int):
     require_admin(telegram_id)
     db.delete_lesson(lesson_id)
     return {"ok": True}
+
+
+
+def parse_text_schedule(text: str) -> list[dict[str, Any]]:
+    """Parse a compact human-friendly schedule format.
+
+    Supported examples:
+      Понедельник
+      08:30-10:05 Математика | Иванов И.И. | 301
+      10:15-11:50 Информатика | Петров П.П. | 205
+
+    Also supports:
+      1 | 08:30-10:05 | Математика | Иванов И.И. | 301
+
+    Empty lines and comments beginning with # are ignored.
+    """
+    import re
+
+    lines = [line.strip() for line in text.splitlines()]
+    current_day = None
+    result: list[dict[str, Any]] = []
+
+    time_re = re.compile(r"^(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})(?:\s+|$)")
+
+    for line_no, line in enumerate(lines, start=1):
+        if not line or line.startswith("#"):
+            continue
+
+        # A standalone day heading.
+        try:
+            current_day = parse_day(line)
+            continue
+        except ValueError:
+            pass
+
+        parts = [p.strip() for p in line.split("|")]
+
+        # Format: lesson_number | time | subject | teacher | room | notes
+        if len(parts) >= 3 and re.fullmatch(r"\d{1,2}", parts[0]):
+            if current_day is None:
+                raise ValueError(f"Строка {line_no}: сначала укажи день недели")
+            time_match = re.fullmatch(
+                r"(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})", parts[1]
+            )
+            if not time_match:
+                raise ValueError(f"Строка {line_no}: неверное время «{parts[1]}»")
+            start_time, end_time = time_match.groups()
+            subject = parts[2]
+            teacher = parts[3] if len(parts) > 3 else ""
+            room = parts[4] if len(parts) > 4 else ""
+            notes = parts[5] if len(parts) > 5 else ""
+        else:
+            # Format: time subject | teacher | room | notes
+            time_match = time_re.match(line)
+            if not time_match:
+                raise ValueError(
+                    f"Строка {line_no}: не удалось распознать занятие. "
+                    "Пример: 08:30-10:05 Математика | Иванов | 301"
+                )
+            start_time, end_time = time_match.groups()
+            rest = line[time_match.end():].strip()
+            fields = [p.strip() for p in rest.split("|")]
+            subject = fields[0] if fields else ""
+            teacher = fields[1] if len(fields) > 1 else ""
+            room = fields[2] if len(fields) > 2 else ""
+            notes = fields[3] if len(fields) > 3 else ""
+
+        if not subject:
+            raise ValueError(f"Строка {line_no}: не указан предмет")
+
+        result.append({
+            "weekday": current_day,
+            "start_time": start_time,
+            "end_time": end_time,
+            "subject": subject,
+            "teacher": teacher,
+            "room": room,
+            "notes": notes,
+        })
+
+    if not result:
+        raise ValueError("Не найдено ни одного занятия")
+
+    return result
+
+
+@app.post("/api/admin/import/text")
+async def import_text_schedule(data: TextScheduleImport, telegram_id: int):
+    require_admin(telegram_id)
+
+    group_name = data.group.strip()
+    parsed = parse_text_schedule(data.text)
+
+    # Reuse the DB import mechanism. It expects a "group" field in every row.
+    rows = [{**lesson, "group": group_name} for lesson in parsed]
+    try:
+        result = db.import_lessons(rows, replace=data.mode == "replace")
+        return {"ok": True, **result}
+    except Exception as exc:
+        raise HTTPException(400, f"Не удалось сохранить расписание: {exc}")
 
 
 @app.get("/api/admin/import/template")
