@@ -230,7 +230,7 @@ def parse_text_schedule(text: str) -> list[dict[str, Any]]:
     current_day = None
     result: list[dict[str, Any]] = []
 
-    time_re = re.compile(r"^(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})(?:\s+|$)")
+    time_re = re.compile(r"^(\d{1,2})[.:](\d{2})\s*[-–—]\s*(\d{1,2})[.:](\d{2})(?:\s+|$)")
 
     for line_no, line in enumerate(lines, start=1):
         if not line or line.startswith("#"):
@@ -250,11 +250,12 @@ def parse_text_schedule(text: str) -> list[dict[str, Any]]:
             if current_day is None:
                 raise ValueError(f"Строка {line_no}: сначала укажи день недели")
             time_match = re.fullmatch(
-                r"(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})", parts[1]
+                r"(\d{1,2}[.:]\d{2})\s*[-–—]\s*(\d{1,2}[.:]\d{2})", parts[1]
             )
             if not time_match:
                 raise ValueError(f"Строка {line_no}: неверное время «{parts[1]}»")
-            start_time, end_time = time_match.groups()
+            h1, m1, h2, m2 = time_match.groups()
+            start_time, end_time = f"{int(h1):02d}:{m1}", f"{int(h2):02d}:{m2}"
             subject = parts[2]
             teacher = parts[3] if len(parts) > 3 else ""
             room = parts[4] if len(parts) > 4 else ""
@@ -267,7 +268,8 @@ def parse_text_schedule(text: str) -> list[dict[str, Any]]:
                     f"Строка {line_no}: не удалось распознать занятие. "
                     "Пример: 08:30-10:05 Математика | Иванов | 301"
                 )
-            start_time, end_time = time_match.groups()
+            h1, m1, h2, m2 = time_match.groups()
+            start_time, end_time = f"{int(h1):02d}:{m1}", f"{int(h2):02d}:{m2}"
             rest = line[time_match.end():].strip()
             fields = [p.strip() for p in rest.split("|")]
             subject = fields[0] if fields else ""
